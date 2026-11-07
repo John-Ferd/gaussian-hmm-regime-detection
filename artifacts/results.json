@@ -1,0 +1,62 @@
+{
+  "data": "synthetic (T=2500, seed=0)",
+  "n_obs": 2500,
+  "bic_by_K": {
+    "1": -14630.5,
+    "2": -15436.8,
+    "3": -15388.4
+  },
+  "chosen_K_by_bic": 2,
+  "K2_fit": {
+    "mu": [
+      -0.00149,
+      0.00099
+    ],
+    "sigma": [
+      0.02046,
+      0.00784
+    ],
+    "A": [
+      [
+        0.9694,
+        0.0306
+      ],
+      [
+        0.0129,
+        0.9871
+      ]
+    ],
+    "expected_duration_days": [
+      32.6,
+      77.2
+    ],
+    "em_iterations": 14,
+    "final_loglik": 7745.782,
+    "loglik_monotone": true
+  },
+  "truth": {
+    "mu": [
+      -0.0015,
+      0.0008
+    ],
+    "sigma": [
+      0.02,
+      0.008
+    ],
+    "A": [
+      [
+        0.97,
+        0.03
+      ],
+      [
+        0.01,
+        0.99
+      ]
+    ]
+  },
+  "state_accuracy": {
+    "viterbi": 0.9732,
+    "smoothed_argmax": 0.9728,
+    "filtered_argmax_causal": 0.9444
+  }
+}
