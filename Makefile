@@ -14,5 +14,5 @@ lint:
 experiment:
 	$(PY) scripts/run_regimes.py
 
-spy:   # needs: pip install -e ".[real-data]" and internet access
-	$(PY) scripts/run_regimes.py --ticker SPY
+spy:   # uses data/SPY.csv if present, else downloads (pip install -e ".[real-data]")
+	$(PY) scripts/run_regimes.py --ticker SPY $(if $(wildcard data/SPY.csv),--csv data/SPY.csv,)

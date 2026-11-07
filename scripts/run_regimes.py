@@ -1,8 +1,8 @@
 """Fit a Gaussian HMM to regime-switching returns and report what it recovers.
 
 Default: synthetic data with known regimes, so recovery can be checked.
-With --ticker (needs `pip install -e ".[real-data]"` and internet), fits real
-daily log returns instead; there is no ground truth then, only the fitted model.
+With --ticker (and --csv FILE, or `pip install -e ".[real-data]"` plus
+internet to download), fits real daily log returns instead; there is no ground truth then, only the fitted model.
 Writes artifacts/results.json (or results_<ticker>.json) and plots.
 """
 import argparse
@@ -19,6 +19,7 @@ from gaussian_hmm import GaussianHMM, load_returns, simulate_regimes
 
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument("--ticker", default=None)
+ap.add_argument("--csv", default=None, help="daily price CSV (Date + Adj Close/Close); use with --ticker for the name")
 ap.add_argument("--start", default="2005-01-01")
 ap.add_argument("--seed", type=int, default=0)
 args = ap.parse_args()
@@ -27,7 +28,7 @@ out.mkdir(exist_ok=True)
 tag = f"_{args.ticker}" if args.ticker else ""
 
 if args.ticker:
-    y, dates = load_returns(args.ticker, args.start)
+    y, dates = load_returns(args.ticker, args.start, csv=args.csv)
     truth = None
 else:
     y, truth = simulate_regimes(T=2500, seed=args.seed)
