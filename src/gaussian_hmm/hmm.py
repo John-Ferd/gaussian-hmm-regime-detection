@@ -150,6 +150,23 @@ class GaussianHMM:
         la = self._forward(log_gaussian(np.asarray(y, dtype=float), self.mu, self.sigma))
         return np.exp(la - logsumexp(la, axis=1, keepdims=True))
 
+    def one_step_logpdf(self, y) -> np.ndarray:
+        """log p(y_t | y_1..t-1) for every t: the density forecast the model made
+        the day before (t = 0 uses the initial distribution). Causal.
+
+        log p(y_1..t) = logsumexp_k log alpha_t(k), so each day's predictive
+        log density is the difference of consecutive cumulative values. The sum
+        over a held-out period is its out-of-sample log-likelihood.
+        """
+        la = self._forward(log_gaussian(np.asarray(y, dtype=float), self.mu, self.sigma))
+        cum = logsumexp(la, axis=1)
+        return np.diff(np.concatenate([[0.0], cum]))
+
+    def predict_next_proba(self, y) -> np.ndarray:
+        """P(s_{t+1} = k | y_1..t): row t is the regime forecast for day t+1,
+        made at the close of day t. Causal, so usable for trading."""
+        return self.filtered_proba(y) @ self.A
+
     def viterbi(self, y) -> np.ndarray:
         """Most likely state path argmax_s p(s_1..T | y_1..T)."""
         logB = log_gaussian(np.asarray(y, dtype=float), self.mu, self.sigma)

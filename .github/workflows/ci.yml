@@ -16,4 +16,3 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check src scripts tests
       - run: pytest -q
-      - run: python scripts/run_regimes.py

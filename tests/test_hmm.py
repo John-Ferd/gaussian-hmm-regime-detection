@@ -87,3 +87,17 @@ def test_states_are_ordered_by_mean():
     m = GaussianHMM(2, n_restarts=2, seed=5).fit(y)
     assert m.mu[0] < m.mu[1]
     np.testing.assert_allclose(m.A.sum(axis=1), 1.0)
+
+
+def test_one_step_predictive_logpdf_sums_to_total_loglik():
+    y, _ = simulate_regimes(T=400, seed=6)
+    m = GaussianHMM(2, n_restarts=2, seed=0).fit(y)
+    np.testing.assert_allclose(m.one_step_logpdf(y).sum(), m.score(y), rtol=1e-10)
+
+
+def test_regime_forecast_is_causal_and_a_distribution():
+    y, _ = simulate_regimes(T=300, seed=7)
+    m = GaussianHMM(2, n_restarts=2, seed=0).fit(y)
+    p_long, p_short = m.predict_next_proba(y), m.predict_next_proba(y[:200])
+    np.testing.assert_allclose(p_long[:200], p_short)
+    np.testing.assert_allclose(p_long.sum(axis=1), 1.0)

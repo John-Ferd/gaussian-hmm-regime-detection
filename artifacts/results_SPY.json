@@ -1,0 +1,161 @@
+{
+  "data": "SPY daily log returns of adjusted closes, 2000-01-04 to 2026-10-30",
+  "n_days": {
+    "train": 3268,
+    "validation": 1510,
+    "test": 1969
+  },
+  "periods": {
+    "train": "2000-2012",
+    "validation": "2013-2018",
+    "test": "2019-"
+  },
+  "density": {
+    "validation_loglik_by_K": {
+      "1": 4834.4,
+      "2": 5233.4,
+      "3": 5331.9,
+      "4": 5338.9
+    },
+    "train_bic_by_K": {
+      "1": -18811.3,
+      "2": -20000.1,
+      "3": -20227.8,
+      "4": -20244.0
+    },
+    "chosen_K_on_validation": 4,
+    "test_loglik": {
+      "hmm_K1": 5897.6,
+      "hmm_K2": 6298.7,
+      "hmm_K3": 6381.5,
+      "hmm_K4": 6416.3,
+      "ewma_riskmetrics": 6293.5
+    },
+    "test_loglik_per_day_gain_vs_single_gaussian": 0.2634,
+    "test_loglik_per_day_gain_vs_ewma": 0.0624
+  },
+  "regimes_fit_on_train_plus_validation_calm_to_turbulent": [
+    {
+      "mean_daily": 0.00116,
+      "ann_vol": 0.076,
+      "expected_days": 24.3,
+      "share_of_days_viterbi": 0.386
+    },
+    {
+      "mean_daily": 0.00015,
+      "ann_vol": 0.149,
+      "expected_days": 18.1,
+      "share_of_days_viterbi": 0.318
+    },
+    {
+      "mean_daily": -0.00079,
+      "ann_vol": 0.245,
+      "expected_days": 40.8,
+      "share_of_days_viterbi": 0.264
+    },
+    {
+      "mean_daily": -0.00263,
+      "ann_vol": 0.564,
+      "expected_days": 21.1,
+      "share_of_days_viterbi": 0.031
+    }
+  ],
+  "em_iterations_final_fit": 99,
+  "trading": {
+    "cost_bps_per_unit_turnover": 2.0,
+    "vol_target_ann": 0.2155,
+    "rule_chosen_on_validation": "hmm_hard",
+    "validation": {
+      "buy_and_hold": {
+        "sharpe": 0.8828,
+        "ann_return": 0.1205,
+        "ann_vol": 0.1288,
+        "total_log_return": 0.6815,
+        "max_drawdown": -0.1935,
+        "avg_exposure": 1.0,
+        "turnover_per_year": 0.0
+      },
+      "vol_target_20d": {
+        "sharpe": 0.8753,
+        "ann_return": 0.117,
+        "ann_vol": 0.1264,
+        "total_log_return": 0.6632,
+        "max_drawdown": -0.1933,
+        "avg_exposure": 0.9921,
+        "turnover_per_year": 0.3891
+      },
+      "hmm_hard": {
+        "sharpe": 0.8726,
+        "ann_return": 0.119,
+        "ann_vol": 0.1288,
+        "total_log_return": 0.6735,
+        "max_drawdown": -0.1935,
+        "avg_exposure": 0.9993,
+        "turnover_per_year": 0.3338
+      },
+      "hmm_soft": {
+        "sharpe": 0.8596,
+        "ann_return": 0.1151,
+        "ann_vol": 0.1267,
+        "total_log_return": 0.6528,
+        "max_drawdown": -0.1917,
+        "avg_exposure": 0.9949,
+        "turnover_per_year": 0.6698
+      }
+    },
+    "test": {
+      "buy_and_hold": {
+        "sharpe": 0.8132,
+        "ann_return": 0.1691,
+        "ann_vol": 0.1921,
+        "total_log_return": 1.2204,
+        "max_drawdown": -0.3372,
+        "avg_exposure": 1.0,
+        "turnover_per_year": 0.0
+      },
+      "vol_target_20d": {
+        "sharpe": 0.9294,
+        "ann_return": 0.1561,
+        "ann_vol": 0.156,
+        "total_log_return": 1.1332,
+        "max_drawdown": -0.2291,
+        "avg_exposure": 0.9577,
+        "turnover_per_year": 1.1469
+      },
+      "hmm_hard": {
+        "sharpe": 0.9949,
+        "ann_return": 0.1709,
+        "ann_vol": 0.1586,
+        "total_log_return": 1.2328,
+        "max_drawdown": -0.245,
+        "avg_exposure": 0.9771,
+        "turnover_per_year": 1.0239
+      },
+      "hmm_soft": {
+        "sharpe": 1.0249,
+        "ann_return": 0.1737,
+        "ann_vol": 0.1563,
+        "total_log_return": 1.2514,
+        "max_drawdown": -0.2385,
+        "avg_exposure": 0.9726,
+        "turnover_per_year": 1.736
+      }
+    },
+    "test_sharpe_diff_block_bootstrap": {
+      "buy_and_hold": {
+        "diff": 0.182,
+        "ci95": [
+          -0.158,
+          0.579
+        ]
+      },
+      "vol_target_20d": {
+        "diff": 0.066,
+        "ci95": [
+          -0.123,
+          0.314
+        ]
+      }
+    }
+  }
+}

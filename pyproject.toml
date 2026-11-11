@@ -7,11 +7,10 @@ name = "gaussian-hmm-regime-detection"
 version = "0.1.0"
 description = "Gaussian HMM (forward-backward, Viterbi, Baum-Welch) for market regime detection"
 requires-python = ">=3.10"
-dependencies = ["numpy", "pandas", "scipy", "matplotlib"]
+dependencies = ["numpy", "pandas", "scipy", "matplotlib", "yfinance"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff", "hmmlearn"]
-real-data = ["yfinance"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
