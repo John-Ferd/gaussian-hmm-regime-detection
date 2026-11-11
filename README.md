@@ -51,7 +51,7 @@ Score: the out-of-sample log-likelihood of each day's return under the density f
 
 <p align="center"><img src="artifacts/regimes_SPY.png" width="85%"></p>
 
-The crisis regime lights up in 2002, late 2008, August 2011, March 2020 and April 2025. The shading uses only data available at the time, not hindsight.
+The crisis regime lights up in 2002, late 2008, August 2011, March 2020 and April 2025. The shading uses filtered probabilities (each day's value depends only on returns up to that day), but the model's parameters are fit on 2000-2018. So the shading before 2019 is in-sample, and only 2019 onward is genuinely out of sample. The trading results below avoid this by refitting every year on earlier data only. *(The title on the chart image predates this correction; it updates on the next `make spy` run.)*
 
 ### 2. Does trading on the regime help? (walk-forward, test period 2019-2026)
 

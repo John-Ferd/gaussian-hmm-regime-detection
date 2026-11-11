@@ -38,6 +38,7 @@ from gaussian_hmm.backtest import (
     strategy_returns,
     vol_target_positions,
 )
+from gaussian_hmm.env import environment
 
 
 def _fit(task):
@@ -167,6 +168,7 @@ def main():
                                                              "ci95": [round(c, 3) for c in v["ci95"]]}
                                                          for k, v in boot.items()}},
     }
+    res["environment"] = environment()
     (OUT / f"results_{args.ticker}.json").write_text(json.dumps(res, indent=2))
     print(json.dumps(res, indent=2))
 
@@ -178,10 +180,11 @@ def main():
     fig, axes = plt.subplots(2, 1, figsize=(10, 5.5), sharex=True)
     axes[0].semilogy(dates, px, color="k", lw=0.8)
     axes[0].fill_between(dates, px.min(), px.max(), where=filt > 0.5, color="tab:red", alpha=0.18, lw=0,
-                         label="P(turbulent) > 0.5 (filtered, causal)")
+                         label="P(turbulent) > 0.5 (filtered)")
     axes[0].set_ylabel(f"{args.ticker} growth of $1 (log scale)")
     axes[0].legend(loc="upper left", fontsize=8)
-    axes[0].set_title(f"K = {K_best} Gaussian HMM fit on 2000-{VAL_END}; shading uses only past data")
+    axes[0].set_title(f"K = {K_best} Gaussian HMM fit on 2000-{VAL_END}; filtered shading, "
+                      f"in-sample before {VAL_END + 1}")
     axes[1].plot(dates, filt, lw=0.6, color="tab:red")
     for b in (TRAIN_END, VAL_END):
         for ax in axes:
