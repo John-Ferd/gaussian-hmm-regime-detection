@@ -1,6 +1,10 @@
 # gaussian-hmm-regime-detection
 
+[![CI](https://github.com/John-Ferd/gaussian-hmm-regime-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/John-Ferd/gaussian-hmm-regime-detection/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
+
 A Gaussian hidden Markov model for detecting market regimes (e.g. calm uptrend vs. volatile drawdown) in daily returns. Forward-backward, Viterbi and Baum-Welch (EM) are written from scratch in NumPy, all in log space. The implementation is checked against brute-force enumeration and against `hmmlearn`.
+
+> **Project history:** first built in 2025. In November 2026 it was rebuilt into a tested, reproducible package and published here, so the commit history starts then. All numbers in this README come from this published version.
 
 ## In one paragraph
 
@@ -32,6 +36,17 @@ Data: 2,500 daily returns from a 2-state HMM. State 0 is "bear" (mean −0.15%/d
 ## Real data
 
 `make spy` fits the same model to SPY daily log returns since 2005 via `yfinance` (`pip install -e ".[real-data]"`; needs internet). Real data has no ground truth, so the output is the fitted parameters, BIC by K and a regime plot (`artifacts/results_SPY.json`, `regimes_SPY.png`). That run isn't included here because the environment this version was built in had no market-data access.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  R["daily log returns<br/>synthetic or CSV"] --> EM["Baum-Welch EM<br/>log space"]
+  EM <-->|"E-step posteriors"| FB["forward-backward<br/>P(regime on day t)"]
+  EM -->|"fitted π, A, μ, σ"| V["Viterbi<br/>most likely regime path"]
+  EM --> BIC["BIC over K = 1, 2, 3<br/>choose number of regimes"]
+  V --> P["regime plot + results.json"]
+```
 
 ## How it works
 
