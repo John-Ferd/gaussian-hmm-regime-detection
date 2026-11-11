@@ -2,91 +2,132 @@
 
 [![CI](https://github.com/John-Ferd/gaussian-hmm-regime-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/John-Ferd/gaussian-hmm-regime-detection/actions/workflows/ci.yml) ![Python 3.11](https://img.shields.io/badge/python-3.11-blue)
 
-A Gaussian hidden Markov model for detecting market regimes (e.g. calm uptrend vs. volatile drawdown) in daily returns. Forward-backward, Viterbi and Baum-Welch (EM) are written from scratch in NumPy, all in log space. The implementation is checked against brute-force enumeration and against `hmmlearn`.
+A Gaussian hidden Markov model for detecting market regimes in **real SPY daily returns, 2000 to October 2026**. Forward-backward, Viterbi and Baum-Welch (EM) are written from scratch in NumPy, all in log space, and checked against brute-force enumeration and against `hmmlearn`. Every result below is out of sample: the model is fit on earlier years and scored on later ones it never saw.
 
 > **Project history:** first built in 2025. In November 2026 it was rebuilt into a tested, reproducible package and published here, so the commit history starts then. All numbers in this README come from this published version.
 
 ## In one paragraph
 
-The market is modelled as switching between hidden regimes. Each regime has its own mean and volatility of daily returns, and a transition matrix gives the chance of staying in or leaving each regime from one day to the next. The three classic HMM algorithms each answer one question:
-- **forward-backward:** how likely is each regime on each day?
-- **Viterbi:** what is the single most likely sequence of regimes?
-- **Baum-Welch (EM):** what parameters best explain the returns?
+The market is modelled as switching between hidden regimes, each with its own mean and volatility of daily returns, and a transition matrix gives the chance of staying in or leaving each regime from one day to the next. Fit to 2000-2018 and tested on 2019-2026, a **4-regime model** (chosen on a validation period, not the test period) gives better day-ahead return distributions than both a single Gaussian and the industry-standard RiskMetrics EWMA volatility model. Used for trading, stepping out of the market when the "crisis" regime is likely raised the test-period Sharpe ratio from **0.81 to 0.99** and cut the worst drawdown from **−34% to −25%**. The honest caveat: most of that gain comes from one event (March 2020), and a block bootstrap shows the Sharpe improvement is **not statistically significant**.
 
-On 2,500 days of synthetic returns with known regimes, the fitted model labels **97.3%** of days correctly and recovers the volatilities and persistence closely. Using only past data, as a trader would have to, it still gets **94.4%**.
+## Data and protocol
 
-## Results (synthetic data with known regimes)
+SPY daily log returns of adjusted closes (dividends and splits included), 6,747 trading days from Yahoo Finance. `make spy` downloads them once into `data/` and reuses the cached copy. The three periods are used strictly in order:
 
-Data: 2,500 daily returns from a 2-state HMM. State 0 is "bear" (mean −0.15%/day, volatility 2.0%). State 1 is "bull" (mean +0.08%/day, volatility 0.8%). `make experiment`, `seed = 0`.
+| period | years | days | used for |
+|---|---|---|---|
+| train | 2000-2012 | 3,268 | fitting (includes the dot-com bust and 2008) |
+| validation | 2013-2018 | 1,510 | choosing the number of regimes K and the trading rule |
+| test | 2019-Oct 2026 | 1,969 | reported once; nothing is chosen on it |
 
-| | true | fitted |
+Every forecast is **causal**: the regime probabilities used on day t+1 come from the forward filter run over data up to day t.
+
+## Results
+
+### 1. Which model forecasts tomorrow's return distribution best?
+
+Score: the out-of-sample log-likelihood of each day's return under the density forecast made the day before (higher is better). Validation picks K; the chosen model is then refit on train + validation and scored on the test period.
+
+| model | validation log-lik (fit on train) | test log-lik (fit on train + validation) |
 |---|---|---|
-| means μ | −0.00150, 0.00080 | −0.00149, 0.00099 |
-| volatilities σ | 0.0200, 0.0080 | 0.0205, 0.0078 |
-| stay probabilities A₀₀, A₁₁ | 0.970, 0.990 | 0.969, 0.987 |
-| expected regime length (days) | 33, 100 | 33, 77 |
+| single Gaussian (K = 1) | 4,834 | 5,898 |
+| HMM, K = 2 | 5,233 | 6,299 |
+| HMM, K = 3 | 5,332 | 6,382 |
+| **HMM, K = 4** (chosen on validation) | **5,339** | **6,416** |
+| RiskMetrics EWMA volatility (λ = 0.94) | n/a | 6,294 |
 
-- **Regime decoding:** Viterbi labels 97.3% of days correctly. Smoothed posteriors (which use the whole series) get 97.3%. *Filtered* posteriors, which only use data up to day t and are the only ones a trading rule could use, get 94.4%. The gap between those last two is the price of not seeing the future.
-- **Model selection:** BIC prefers K = 2 over K = 1 and K = 3 (−15,437 vs −14,631 and −15,388).
-- **EM:** converged in 14 iterations. The log-likelihood never decreased, as EM guarantees (`artifacts/loglik.png`).
-- **Means are the hardest parameters to pin down.** The bull-regime mean is estimated at 0.099% vs 0.080% true. A daily mean is tiny next to a daily volatility, so even 2,500 days pin it down only roughly. The volatilities and transition probabilities are recovered much more tightly, and they are what actually separates the regimes.
+- K = 4 was chosen on validation, and BIC on the training data agrees (−20,244 vs −20,228 for K = 3).
+- On the test period the K = 4 HMM beats a single Gaussian by **0.26 nats per day** and EWMA volatility, a strong and widely used baseline, by **0.06 nats per day**.
+- EWMA only adapts the volatility. The HMM also knows that turbulent periods have fatter tails and tend to persist, so it gives extreme days more probability.
 
-<p align="center"><img src="artifacts/regimes.png" width="80%"></p>
+**The four regimes** (fit on 2000-2018, ordered calm to turbulent):
 
-## Real data
+| regime | mean daily return | annual volatility | average length | share of days |
+|---|---|---|---|---|
+| calm | +0.116% | 7.6% | 24 days | 39% |
+| normal | +0.015% | 14.9% | 18 days | 32% |
+| stressed | −0.079% | 24.5% | 41 days | 26% |
+| crisis | −0.263% | 56.4% | 21 days | 3% |
 
-`make spy` fits the same model to SPY daily log returns since 2005 via `yfinance` (`pip install -e ".[real-data]"`; needs internet). Real data has no ground truth, so the output is the fitted parameters, BIC by K and a regime plot (`artifacts/results_SPY.json`, `regimes_SPY.png`). That run isn't included here because the environment this version was built in had no market-data access.
+<p align="center"><img src="artifacts/regimes_SPY.png" width="85%"></p>
+
+The crisis regime lights up in 2002, late 2008, August 2011, March 2020 and April 2025. The shading uses only data available at the time, not hindsight.
+
+### 2. Does trading on the regime help? (walk-forward, test period 2019-2026)
+
+Every calendar year, the HMM is refit on all data before that year and then trades the year using only the forecast made at each previous close. There is a 2 bp cost per unit of turnover.
+
+| strategy | Sharpe | annual return | annual vol | max drawdown | avg exposure |
+|---|---|---|---|---|---|
+| buy and hold | 0.81 | 16.9% | 19.2% | −33.7% | 1.00 |
+| volatility targeting (20-day, 21.6% target) | 0.93 | 15.6% | 15.6% | −22.9% | 0.96 |
+| **HMM hard switch** (chosen on validation) | **0.99** | **17.1%** | 15.9% | −24.5% | 0.98 |
+| HMM soft (exposure = 1 − P(crisis)) | 1.02 | 17.4% | 15.6% | −23.9% | 0.97 |
+
+<p align="center"><img src="artifacts/backtest_SPY.png" width="80%"></p>
+
+- The rule was chosen on validation (2013-2018), where neither HMM rule beat buy-and-hold: there was almost no crisis to avoid. The hard switch was picked because its validation Sharpe was slightly higher than the soft rule's (0.87 vs 0.86). On the test period the soft rule happened to do a little better, but it was not chosen, and reporting it as the headline would be picking with hindsight.
+- **Statistical significance.** A stationary block bootstrap (20-day blocks, 2,000 resamples) gives a 95% interval for the Sharpe gain of **[−0.16, +0.58]** against buy-and-hold and **[−0.12, +0.31]** against volatility targeting. Both include zero. Seven years with essentially one crash in them is not enough to prove an edge.
+- **Where the gain comes from:** almost entirely from being out of the market for part of March 2020. The rule is in the market 98% of the time and trades about once a year.
+- Volatility targeting is included because it is the simple benchmark any "step aside in turbulence" rule should beat. The HMM rule beats it on this test period, but not significantly.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  R["daily log returns<br/>synthetic or CSV"] --> EM["Baum-Welch EM<br/>log space"]
-  EM <-->|"E-step posteriors"| FB["forward-backward<br/>P(regime on day t)"]
-  EM -->|"fitted π, A, μ, σ"| V["Viterbi<br/>most likely regime path"]
-  EM --> BIC["BIC over K = 1, 2, 3<br/>choose number of regimes"]
-  V --> P["regime plot + results.json"]
+  D["SPY adjusted closes<br/>2000-2026, Yahoo Finance"] --> R["daily log returns"]
+  R --> EM["Baum-Welch EM<br/>log space, 8 restarts"]
+  EM <-->|"E-step posteriors"| FB["forward-backward"]
+  EM --> SEL["choose K on validation<br/>out-of-sample log-likelihood"]
+  SEL --> F["forward filter<br/>P(regime tomorrow | data to today)"]
+  F --> DEN["density forecast<br/>vs Gaussian and EWMA"]
+  F --> WF["walk-forward trading<br/>yearly refits, 2 bp costs"]
+  WF --> BS["block bootstrap<br/>Sharpe-difference intervals"]
 ```
 
 ## How it works
 
 Model: s₁ ~ π, s_t | s_{t−1} ~ A[s_{t−1}, ·], y_t | s_t = k ~ N(μ_k, σ_k²).
 
-**Forward-backward in log space.** A 2,500-step sequence has likelihood around e^7,746, and raw probability products overflow or underflow quickly. There are two standard fixes:
+**Forward-backward in log space.** A 6,700-day sequence has a likelihood around e^20,000, and raw probability products overflow or underflow quickly. There are two standard fixes:
 - rescale α and β at every step;
 - keep everything as logs and combine terms with log-sum-exp.
 
 This repo uses logs, because every intermediate quantity keeps a direct meaning (log α_t(k) = log p(y₁..t, s_t = k)), which makes it easy to test. The log-sum-exp over the previous state is computed as `c + log(exp(a − c) @ A)` with c = max(a), which is the same number but a matrix product, about 17× faster in Python than calling `logsumexp` per step.
 
-**Baum-Welch.** The E-step computes γ_t(k) = P(s_t = k | y) and ξ_t(j,k) = P(s_t = j, s_{t+1} = k | y). The M-step has closed forms: A is normalized expected transition counts, and μ and σ are γ-weighted mean and standard deviation. Two practical details:
-- EM only finds a local optimum, so `fit` runs 5 random restarts and keeps the best log-likelihood.
-- Fitted states are relabelled by increasing mean, so "state 0" always means the low-mean regime. Without that, state labels are arbitrary (label switching) and results can't be compared across runs.
+**Baum-Welch.** The E-step computes γ_t(k) = P(s_t = k | y) and ξ_t(j,k) = P(s_t = j, s_{t+1} = k | y). The M-step has closed forms: A is normalized expected transition counts, and μ and σ are γ-weighted mean and standard deviation. EM only finds a local optimum, so `fit` runs several random restarts and keeps the best log-likelihood. States are relabelled by increasing mean so results are comparable across runs.
 
-**Viterbi** is the max-product version of the forward pass with back-pointers. It returns the single most likely *path*. That is not the same as taking the most likely state at each day separately (smoothed argmax), though here they agree on almost all days.
+**One-step-ahead forecasts.** Because log p(y₁..t) = logsumexp_k log α_t(k), the predictive log density of day t given the past is the difference of two consecutive cumulative values (`one_step_logpdf`). Summed over a held-out period, that is the out-of-sample log-likelihood used to choose K. Tomorrow's regime distribution is the filtered distribution times the transition matrix (`predict_next_proba`).
 
-**Filtered vs smoothed.** `smoothed_proba` uses all T observations, so using it for a trading backtest leaks the future. `filtered_proba` uses only y₁..t. A test checks that appending future data never changes past filtered probabilities.
+**Filtered vs smoothed.** `smoothed_proba` uses all T observations, so using it in a backtest would leak the future. Everything that trades or forecasts uses the filter, and tests check that appending future data never changes past forecasts.
+
+**Viterbi** is the max-product version of the forward pass with back-pointers. It returns the single most likely regime *path*, used for the "share of days" column above.
 
 ## Tests
 
-`make test` runs 8 tests:
+`make test` runs 15 tests, on small simulated sequences where the true regimes are known (that is the only way to check correctness exactly). The experiments themselves use only real data.
 - Likelihood, Viterbi path and smoothed posteriors match brute-force enumeration over all 2⁵ paths on a toy sequence.
 - Log-likelihood matches `hmmlearn` to 1e-10 relative on a 3,000-step sequence.
-- EM never decreases the likelihood.
-- Fitting recovers the regimes (>95% Viterbi accuracy) and parameters.
-- Filtered probabilities are causal.
-- States are ordered by mean.
+- EM never decreases the likelihood; fitting recovers known regimes and parameters; states are ordered by mean.
+- One-step predictive log densities sum exactly to the total log-likelihood.
+- Filtered probabilities, regime forecasts and volatility-targeting positions are causal.
+- The backtest holds yesterday's position, charges costs per unit of turnover, and computes drawdowns correctly.
+- The bootstrap interval contains its point estimate.
 
 ## How to run
 
 ```bash
 pip install -e ".[dev]"     # or: make setup
 make test
-make experiment             # synthetic run -> artifacts/results.json, regimes.png, loglik.png
-make spy                    # real SPY data (needs the real-data extra and internet)
+make spy                    # downloads SPY once (needs internet), ~4 minutes on a multi-core machine
+                            # -> artifacts/results_SPY.json, regimes_SPY.png, backtest_SPY.png, loglik_SPY.png
 ```
+
+Adjusted prices are rescaled by a constant whenever a new dividend is paid, which leaves log returns, and so every number here, unchanged between downloads.
 
 ## Limitations
 
-- Univariate Gaussian emissions. Real returns have fat tails, which a Gaussian HMM partly absorbs by inventing extra high-volatility regimes; Student-t emissions would be the next step.
-- Point estimates only: EM gives one parameter set and says nothing about how uncertain it is. [bayesian-regime-hmm](https://github.com/John-Ferd/bayesian-regime-hmm) fits the same model by Gibbs sampling to get posterior uncertainty.
-- Regime durations in a time-homogeneous HMM are geometric, which real regimes need not be.
+- Univariate Gaussian emissions. Real returns have fat tails even within a regime; part of what the 4-state model does is approximate a fat-tailed distribution with extra high-volatility states. Student-t emissions would be the next step.
+- One asset, one test period. The trading result rests on 7 years containing essentially one crash, which is why it is not significant.
+- Parameters are frozen for a year between refits; regime durations in a time-homogeneous HMM are geometric, which real regimes need not be.
+- Point estimates only: EM gives one parameter set. [bayesian-regime-hmm](https://github.com/John-Ferd/bayesian-regime-hmm) fits regime models by Gibbs sampling to carry parameter uncertainty into the forecast.
